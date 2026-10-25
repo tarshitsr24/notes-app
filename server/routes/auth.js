@@ -6,7 +6,11 @@ const User = require("../models/User");
 const router = express.Router();
 
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured in backend environment variables.");
+  }
+  return jwt.sign({ id: userId }, secret, {
     expiresIn: "90d",
   });
 };
@@ -18,35 +22,37 @@ router.post("/register", async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Please provide both email and password" });
+        .json({ message: "Please provide both email and password." });
     }
 
-    // server/routes/auth.js (Line 23)
+    // Sanitize email: normalize case and strip accidental whitespace
+    const cleanEmail = email.trim().toLowerCase();
+
     if (password.length < 6) {
       return res
-        .status(400) // Changed from 600 to valid HTTP 400
-        .json({ message: "Password must be at least 6 characters long" });
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long." });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res
         .status(400)
-        .json({ message: "A user with this email already exists" });
+        .json({ message: "A user with this email already exists." });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = new User({
-      email,
+      email: cleanEmail,
       password: hashedPassword,
     });
     await user.save();
 
     const token = generateToken(user._id);
 
-    res.status(201).json({
+    return res.status(201).json({
       token,
       user: {
         id: user._id,
@@ -54,7 +60,16 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({
+    console.error("Registration error:", err);
+
+    // Catch MongoDB duplicate key race condition (E11000)
+    if (err.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "A user with this email already exists." });
+    }
+
+    return res.status(500).json({
       message: "Server error during registration",
       error: err.message,
     });
@@ -68,22 +83,25 @@ router.post("/login", async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Please provide both email and password" });
+        .json({ message: "Please provide both email and password." });
     }
 
-    const user = await User.findOne({ email });
+    // Sanitize email: normalize case and strip accidental whitespace
+    const cleanEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid email or password." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid email or password." });
     }
 
     const token = generateToken(user._id);
 
-    res.json({
+    return res.json({
       token,
       user: {
         id: user._id,
@@ -91,7 +109,8 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    res
+    console.error("Login error:", err);
+    return res
       .status(500)
       .json({ message: "Server error during login", error: err.message });
   }
