@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+* {
+  font-family: 'Gilroy', sans-serif;
+}
+
+::selection{
+    color: rgb(214, 167, 28);
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a; /* zinc-800 */
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46; /* zinc-700 */
+}
