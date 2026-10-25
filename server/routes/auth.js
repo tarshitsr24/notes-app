@@ -21,9 +21,10 @@ router.post("/register", async (req, res) => {
         .json({ message: "Please provide both email and password" });
     }
 
+    // server/routes/auth.js (Line 23)
     if (password.length < 6) {
       return res
-        .status(600)
+        .status(400) // Changed from 600 to valid HTTP 400
         .json({ message: "Password must be at least 6 characters long" });
     }
 

@@ -26,17 +26,30 @@ function AuthModal({ onLoginSuccess }) {
     const endpoint = isRegister ? "/register" : "/login";
     const targetUrl = `${API_BASE_URL}/api/auth${endpoint}`;
 
+    // client/src/components/AuthModal.jsx -> inside handleSubmit:
+
     try {
+      console.log("Submitting to:", targetUrl); // Verify the exact URL in F12 console
+
       const res = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      // Safely parse JSON or fall back to empty object
+      let data = {};
+      const text = await res.text();
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: text };
+        }
+      }
 
       if (!res.ok) {
-        throw new Error(data.message || `Error ${res.status}: Request failed`);
+        throw new Error(data.message || `Error ${res.status}: ${res.statusText || "Request failed"}`);
       }
 
       // Save token and dismiss modal
@@ -46,7 +59,7 @@ function AuthModal({ onLoginSuccess }) {
       setError(err.message || "Failed to connect to the server.");
     } finally {
       setLoading(false);
-    }
+    } 
   };
 
   return (
