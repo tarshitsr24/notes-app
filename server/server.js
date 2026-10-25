@@ -27,3 +27,7 @@ mongoose
     app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
   })
   .catch((err) => console.error("Database connection error:", err));
+
+  app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", message: "Server is running smoothly" });
+});
